@@ -6,7 +6,8 @@ import wave
 from datetime import datetime
 from pathlib import PurePath
 
-from utils import get_args, get_filename
+from utils import get_args, get_filename, setup_logging
+
 
 class AudioSentryRecorder(object):
 
@@ -23,6 +24,8 @@ class AudioSentryRecorder(object):
 
         self.start = None
 
+        setup_logging()
+
     def __call__(self, args=None):
 
         if args is None:
@@ -31,7 +34,7 @@ class AudioSentryRecorder(object):
             self.args = args
 
         self.signal_power_threshold = self.args.threshold
-        
+
         stream = self.p.open(format=self.sample_format,
                              channels=self.channels,
                              rate=self.fs,
@@ -42,7 +45,6 @@ class AudioSentryRecorder(object):
         self.start = None
         try:
             while True:
-                
                 # Store data in chunks for 3 seconds
                 for i in range(0, int(self.fs / self.chunk * self.seconds)):
                     data = stream.read(self.chunk)
@@ -88,6 +90,9 @@ class AudioSentryRecorder(object):
             wf.writeframes(b''.join(recording))
 
 
-if __name__ == '__main__':
+def console_script():
     sentry = AudioSentryRecorder()
     sentry()
+
+if __name__ == '__main__':
+   console_script()
