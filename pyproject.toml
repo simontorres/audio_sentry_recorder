@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "audio_sentry_recorder"
+dynamic = ["version"]
+description = "Tool for recording audio whenever the audio signal is above a certain threshold."
+readme = "README.md"
+requires-python = ">=3.8"
+license = {file = "LICENSE"}
+keywords = [
+  "audio",
+  "recoder",
+  "radio"
+]
+
+authors = [
+  {name = "Simón Torres", email = "simonneftali@gmail.com"}
+]
+maintainers = [
+  {name = "Simón Torres", email = "simonneftali@gmail.com"}
+]
+
+classifiers = [
+  'Development Status :: 5 - Production/Stable',
+  'Environment :: Console',
+  'Intended Audience :: Developers',
+  'Intended Audience :: Education',
+  'Intended Audience :: Science/Research',
+  'License :: OSI Approved :: BSD License',
+  'Programming Language :: Python :: 3.8',
+  'Programming Language :: Python :: 3.9',
+  'Programming Language :: Python :: 3.10', 
+  'Programming Language :: Python :: 3.11', 
+  'Programming Language :: Python :: 3.12', 
+  'Natural Language :: English',  
+  'Operating System :: POSIX :: Linux',
+  'Operating System :: POSIX :: Other',
+  'Operating System :: MacOS :: MacOS X',  
+  'Topic :: Scientific/Engineering :: Astronomy',
+  'Topic :: Scientific/Engineering :: Information Analysis',
+  'Topic :: Software Development :: Libraries :: Python Modules',
+]
+
+dependencies = [
+  "audioop",
+  "pyaudio",
+  "wave"
+]
+
+[project.scripts]
+redccd = "goodman_pipeline.scripts.redccd:__main__"
+redspec = "goodman_pipeline.scripts.redspec:__main__"
+
+[tool.setuptools]
+[tool.setuptools.packages.find]
+where = ["audio_sentry_recorder"]
+
+[tool.setuptools_scm]
+version_file = "audio_sentry_recorder/version.py"
