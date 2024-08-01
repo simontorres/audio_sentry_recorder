@@ -4,73 +4,90 @@ import pyaudio
 import wave
 
 from datetime import datetime
+from pathlib import PurePath
 
-def get_filename(start: datetime, end: datetime, format: str = 'wav') -> str:
-    folder_name = start.strftime("%Y%m%d")
-    name_start = start.strftime("%Y%m%d_%H%M%S")
-    name_end = ""
+from utils import get_args, get_filename
 
-    filename = f"{folder_name}/{name_start}{name_end}.{format}"
-    return filename, folder_name
+class AudioSentryRecorder(object):
 
-chunk = 1024  # Record in chunks of 1024 samples
-sample_format = pyaudio.paInt16  # 16 bits per sample
-channels = 2
-fs = 44100  # Record at 44100 samples per second
-seconds = 2
-signal_power_threshold = 100
+    def __init__(self) -> None:
+        self.args = None
+        self.chunk = 1024  # Record in chunks of 1024 samples
+        self.sample_format = pyaudio.paInt16  # 16 bits per sample
+        self.channels = 2
+        self.fs = 44100  # Record at 44100 samples per second
+        self.seconds = 2
+        self.signal_power_threshold = 100
 
-p = pyaudio.PyAudio()  # Create an interface to PortAudio
+        self.p = pyaudio.PyAudio()  # Create an interface to PortAudio
 
+        self.start = None
 
-stream = p.open(format=sample_format,
-                channels=channels,
-                rate=fs,
-                frames_per_buffer=chunk,
-                input=True)
-frames = []  # Initialize array to store frames
-recording = []
-start = None
-try:
-    while True:
-        
-        # Store data in chunks for 3 seconds
-        for i in range(0, int(fs / chunk * seconds)):
-            data = stream.read(chunk)
-            frames.append(data)
-        
-        rms = audioop.rms(b''.join(frames), 2)
-        print(f"Listening... Sound level: {rms}", end="\r")
+    def __call__(self, args=None):
 
-        if rms > signal_power_threshold:
-            if not start:
-                start = datetime.now()
-            recording.extend(frames)
-            frames = []
+        if args is None:
+            self.args = get_args()
         else:
-            if not start:
-                continue
-            print('Finished recording', end="\r")
+            self.args = args
 
-            end = datetime.now()
-            filename, folder_name = get_filename(start=start, end=end)
-            if not os.path.exists(folder_name):
-                os.makedirs(folder_name)
+        self.signal_power_threshold = self.args.threshold
+        
+        stream = self.p.open(format=self.sample_format,
+                             channels=self.channels,
+                             rate=self.fs,
+                             frames_per_buffer=self.chunk,
+                             input=True)
+        frames = []  # Initialize array to store frames
+        recording = []
+        self.start = None
+        try:
+            while True:
+                
+                # Store data in chunks for 3 seconds
+                for i in range(0, int(self.fs / self.chunk * self.seconds)):
+                    data = stream.read(self.chunk)
+                    frames.append(data)
+                
+                rms = audioop.rms(b''.join(frames), 2)
+                print(f"Listening... Sound level: {rms}, threshold: {self.signal_power_threshold}", end="\r")
 
-            print(f"Recording saved to: {filename}")
+                if rms > self.signal_power_threshold:
+                    if not self.start:
+                        self.start = datetime.now()
+                    recording.extend(frames)
+                    frames = []
+                else:
+                    if not self.start:
+                        continue
+                    print('Finished recording', end="\r")
 
-            # Save the recorded data as a WAV file
-            wf = wave.open(filename, 'wb')
-            wf.setnchannels(channels)
-            wf.setsampwidth(p.get_sample_size(sample_format))
-            wf.setframerate(fs)
+                    self.end = datetime.now()
+                    filename, folder_name = get_filename(start=self.start, end=self.end, save_to_folder=self.args.save_to_folder)
+                    if not os.path.exists(folder_name):
+                        os.makedirs(folder_name)
+
+                    print(f"Recording saved to: {filename}")
+
+                    self.save_to_file(filename=filename, recording=recording)
+                    self.start = None
+                    recording = []
+                    frames = []
+        except KeyboardInterrupt:
+            stream.stop_stream()
+            stream.close()
+            # Terminate the PortAudio interface
+            self.p.terminate()
+
+    def save_to_file(self, filename: PurePath, recording):
+
+        # Save the recorded data as a WAV file
+        with wave.open(os.fspath(filename), 'wb') as wf:
+            wf.setnchannels(self.channels)
+            wf.setsampwidth(self.p.get_sample_size(self.sample_format))
+            wf.setframerate(self.fs)
             wf.writeframes(b''.join(recording))
-            wf.close()
-            start = None
-            recording = []
-            frames = []
-except KeyboardInterrupt:
-    stream.stop_stream()
-    stream.close()
-    # Terminate the PortAudio interface
-    p.terminate()
+
+
+if __name__ == '__main__':
+    sentry = AudioSentryRecorder()
+    sentry()
